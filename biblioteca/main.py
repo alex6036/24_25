@@ -1,34 +1,44 @@
 from book import Book
 from book_genre import BookGenre
-
-def buscar_libro_por_titulo(libros, titulo):
-    for libro in libros:
-        if libro.get_title().lower() == titulo.lower():
-            return libro
-    return None
+from user import User
+from employee import Employee
 
 def main():
-    # Base de datos simulada
-    biblioteca = [
-        Book("1984", "George Orwell", BookGenre.FICTION),
-        Book("Una breve historia del tiempo", "Stephen Hawking", BookGenre.SCIENCE),
-        Book("El arte de la guerra", "Sun Tzu", BookGenre.ART)
-    ]
+    # Inicializar listas vacías
+    biblioteca = []
+    usuarios = []
 
-    # Pedir al usuario el título del libro
-    titulo_buscado = input("Introduce el título del libro que deseas buscar: ")
+    # Crear un empleado
+    empleado = Employee("Laura")
 
-    # Buscar el libro
-    libro_encontrado = buscar_libro_por_titulo(biblioteca, titulo_buscado)
+    # Crear libros y agregarlos con el empleado
+    libro1 = Book("1984", "George Orwell", BookGenre.FICTION)
+    libro2 = Book("El arte de la guerra", "Sun Tzu", BookGenre.ART)
 
-    if libro_encontrado:
-        print("\n📚 Libro encontrado:")
-        print("Título:", libro_encontrado.get_title())
-        print("Autor:", libro_encontrado.get_author())
-        print("Género:", libro_encontrado.get_genre().value)
-        print("¿Disponible?", libro_encontrado.is_available())
-    else:
-        print("\n❌ El libro no se encuentra en la biblioteca.")
+    empleado.add_book(biblioteca, libro1)
+    empleado.add_book(biblioteca, libro2)
+
+    # Crear un usuario y añadirlo con el empleado
+    usuario1 = User("Carlos")
+    empleado.add_user(usuarios, usuario1)
+
+    print("\n📚 Libros en la biblioteca:")
+    for libro in biblioteca:
+        print(f"- {libro.get_title()} ({'Disponible' if libro.is_available() else 'Prestado'})")
+
+    # Usuario toma prestado un libro
+    print("\n📥 Préstamo de libro:")
+    usuario1.borrow_book(libro1)
+
+    # Usuario intenta tomar el mismo libro otra vez
+    usuario1.borrow_book(libro1)
+
+    # Usuario devuelve el libro
+    print("\n📤 Devolución de libro:")
+    usuario1.return_book(libro1)
+
+    # Usuario intenta devolverlo otra vez
+    usuario1.return_book(libro1)
 
 if __name__ == "__main__":
     main()
