@@ -1,4 +1,18 @@
 from book_genre import BookGenre
+import gradio as gr
+
+with gr.Blocks() as demo:
+    nombre = gr.Textbox(label="Tu nombre")
+    salida = gr.Textbox(label="Saludo")
+    btn = gr.Button("Saludar")
+
+    def saludar(nombre):
+        return f"Hola, {nombre}!"
+
+    btn.click(saludar, inputs=nombre, outputs=salida)
+
+demo.launch()
+
 
 class Book:
     def __init__(self, title: str, author: str, genre: BookGenre):

@@ -1,45 +1,121 @@
-from book import Book
-from book_genre import BookGenre
-from user import User
-from employee import Employee
+import gradio as gr
+from sqlalchemy.orm import Session
+from database import init_db, Session
+from models import Book, User, BookGenre
 
-def main():
-    # Inicializar listas vacías
-    biblioteca = []
-    usuarios = []
+# Inicializar la base de datos
+init_db()
 
-    # Crear un empleado
-    empleado = Employee("Laura")
+# Función para añadir libro
+def add_book(title, author, genre):
+    session = Session()
+    new_book = Book(title=title, author=author, genre=BookGenre[genre])
+    session.add(new_book)
+    session.commit()
+    session.close()
+    return f"✅ Libro '{title}' añadido."
 
-    # Crear libros y agregarlos con el empleado
-    libro1 = Book("1984", "George Orwell", BookGenre.FICTION)
-    libro2 = Book("El arte de la guerra", "Sun Tzu", BookGenre.ART)
+# Función para añadir usuario
+def add_user(name):
+    session = Session()
+    new_user = User(name=name)
+    session.add(new_user)
+    session.commit()
+    session.close()
+    return f"👤 Usuario '{name}' añadido."
 
-    empleado.add_book(biblioteca, libro1)
-    empleado.add_book(biblioteca, libro2)
+# Función para ver los libros
+def list_books():
+    session = Session()
+    books = session.query(Book).all()
+    result = "\n".join([f"{b.title} ({'Disponible' if b.is_available else 'Prestado'})" for b in books])
+    session.close()
+    return result if result else "No hay libros."
 
-    # Crear un usuario y añadirlo con el empleado
-    usuario1 = User("Carlos")
-    empleado.add_user(usuarios, usuario1)
+# Función para ver los usuarios
+def list_users():
+    session = Session()
+    users = session.query(User).all()
+    result = "\n".join([f"{u.name}" for u in users])
+    session.close()
+    return result if result else "No hay usuarios."
 
-    print("\n📚 Libros en la biblioteca:")
-    for libro in biblioteca:
-        print(f"- {libro.get_title()} ({'Disponible' if libro.is_available() else 'Prestado'})")
+# Función para prestar libro
+def borrow_book(user_name, book_title):
+    session = Session()
+    user = session.query(User).filter(User.name == user_name).first()
+    book = session.query(Book).filter(Book.title == book_title).first()
+    
+    if user and book:
+        if book.is_available:
+            book.is_available = False
+            session.commit()
+            session.close()
+            return f"✅ {user_name} ha tomado prestado '{book_title}'."
+        else:
+            session.close()
+            return f"❌ El libro '{book_title}' no está disponible."
+    else:
+        session.close()
+        return "⚠️ Usuario o libro no encontrado."
 
-    # Usuario toma prestado un libro
-    print("\n📥 Préstamo de libro:")
-    usuario1.borrow_book(libro1)
+# Función para devolver libro
+def return_book(user_name, book_title):
+    session = Session()
+    user = session.query(User).filter(User.name == user_name).first()
+    book = session.query(Book).filter(Book.title == book_title).first()
+    
+    if user and book:
+        if not book.is_available:
+            book.is_available = True
+            session.commit()
+            session.close()
+            return f"📚 {user_name} ha devuelto '{book_title}'."
+        else:
+            session.close()
+            return f"⚠️ El libro '{book_title}' no ha sido prestado."
+    else:
+        session.close()
+        return "⚠️ Usuario o libro no encontrado."
 
-    # Usuario intenta tomar el mismo libro otra vez
-    usuario1.borrow_book(libro1)
+# Interfaz Gradio
+with gr.Blocks() as demo:
+    with gr.Tab("Añadir Libro"):
+        title = gr.Textbox(label="Título")
+        author = gr.Textbox(label="Autor")
+        genre = gr.Dropdown(choices=[g.name for g in BookGenre], label="Género")
+        out1 = gr.Textbox(label="Resultado")
+        btn1 = gr.Button("Añadir Libro")
+        btn1.click(fn=add_book, inputs=[title, author, genre], outputs=out1)
 
-    # Usuario devuelve el libro
-    print("\n📤 Devolución de libro:")
-    usuario1.return_book(libro1)
+    with gr.Tab("Añadir Usuario"):
+        username = gr.Textbox(label="Nombre de Usuario")
+        out2 = gr.Textbox(label="Resultado")
+        btn2 = gr.Button("Añadir Usuario")
+        btn2.click(fn=add_user, inputs=[username], outputs=out2)
 
-    # Usuario intenta devolverlo otra vez
-    usuario1.return_book(libro1)
+    with gr.Tab("Ver Libros"):
+        out3 = gr.Textbox(label="Libros en Biblioteca")
+        btn3 = gr.Button("Listar Libros")
+        btn3.click(fn=list_books, outputs=out3)
 
-if __name__ == "__main__":
-    main()
+    with gr.Tab("Ver Usuarios"):
+        out4 = gr.Textbox(label="Usuarios en la Biblioteca")
+        btn4 = gr.Button("Listar Usuarios")
+        btn4.click(fn=list_users, outputs=out4)
 
+    with gr.Tab("Prestar Libro"):
+        user_name_borrow = gr.Textbox(label="Nombre del Usuario")
+        book_title_borrow = gr.Textbox(label="Título del Libro")
+        out5 = gr.Textbox(label="Resultado")
+        btn5 = gr.Button("Prestar Libro")
+        btn5.click(fn=borrow_book, inputs=[user_name_borrow, book_title_borrow], outputs=out5)
+
+    with gr.Tab("Devolver Libro"):
+        user_name_return = gr.Textbox(label="Nombre del Usuario")
+        book_title_return = gr.Textbox(label="Título del Libro")
+        out6 = gr.Textbox(label="Resultado")
+        btn6 = gr.Button("Devolver Libro")
+        btn6.click(fn=return_book, inputs=[user_name_return, book_title_return], outputs=out6)
+
+demo.launch(share=True)
